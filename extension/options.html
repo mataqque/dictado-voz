@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<title>Dictado — opciones</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				font-family: system-ui, sans-serif;
+			}
+			body {
+				margin: 0 auto;
+				padding: 2rem 1.5rem;
+				max-width: 34rem;
+				line-height: 1.5;
+			}
+			h1 {
+				font-size: 1.25rem;
+				margin: 0 0 1.5rem;
+			}
+			section {
+				margin-bottom: 2rem;
+			}
+			h2 {
+				font-size: 0.8rem;
+				text-transform: uppercase;
+				letter-spacing: 0.06em;
+				opacity: 0.6;
+				margin: 0 0 0.75rem;
+			}
+			label {
+				display: block;
+				margin-bottom: 0.75rem;
+				font-size: 0.9rem;
+			}
+			input,
+			select {
+				width: 100%;
+				padding: 0.5rem;
+				margin-top: 0.25rem;
+				border: 1px solid rgba(128, 128, 128, 0.4);
+				border-radius: 6px;
+				background: transparent;
+				color: inherit;
+				font: inherit;
+			}
+			button {
+				padding: 0.55rem 1rem;
+				border: 1px solid rgba(128, 128, 128, 0.4);
+				border-radius: 6px;
+				background: transparent;
+				color: inherit;
+				font: inherit;
+				cursor: pointer;
+			}
+			button:hover {
+				border-color: currentColor;
+			}
+			#actividad {
+				margin-top: 0.5rem;
+				padding: 0.75rem;
+				border-radius: 6px;
+				background: rgba(128, 128, 128, 0.12);
+				font-family: ui-monospace, monospace;
+				font-size: 0.78rem;
+				line-height: 1.7;
+				max-height: 13rem;
+				overflow-y: auto;
+				white-space: pre-wrap;
+				word-break: break-word;
+			}
+			#estado,
+			#prueba-salida {
+				margin-top: 0.75rem;
+				padding: 0.75rem;
+				border-radius: 6px;
+				background: rgba(128, 128, 128, 0.12);
+				font-size: 0.9rem;
+				min-height: 1.2rem;
+				white-space: pre-wrap;
+			}
+			.hint {
+				font-size: 0.8rem;
+				opacity: 0.65;
+				margin-top: 0.25rem;
+			}
+			.fila {
+				display: flex;
+				align-items: center;
+				gap: 0.6rem;
+				margin-bottom: 0.5rem;
+				font-size: 0.9rem;
+			}
+			.punto {
+				width: 0.65rem;
+				height: 0.65rem;
+				border-radius: 50%;
+				background: #9ca3af;
+				flex: none;
+			}
+			.punto.ok {
+				background: #22c55e;
+			}
+			.punto.mal {
+				background: #ef4444;
+			}
+			.punto.activo {
+				background: #22c55e;
+				animation: latido 1.2s ease-in-out infinite;
+			}
+			@keyframes latido {
+				50% {
+					opacity: 0.25;
+				}
+			}
+			.mini {
+				margin-left: auto;
+				padding: 0.25rem 0.6rem;
+				font-size: 0.8rem;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Dictado</h1>
+
+		<section>
+			<h2>Estado</h2>
+			<div class="fila">
+				<span class="punto" id="punto-backend"></span>
+				<span id="texto-backend">Comprobando…</span>
+				<button id="reconectar" class="mini">Reconectar</button>
+			</div>
+			<div class="fila">
+				<span class="punto" id="punto-micro"></span>
+				<span id="texto-micro">Micrófono en reposo</span>
+			</div>
+			<div id="detalle" class="hint"></div>
+		</section>
+
+		<section>
+			<h2>Actividad</h2>
+			<div id="actividad">Sin actividad todavía.</div>
+			<p class="hint">
+				Lo que va pasando en tiempo real. No necesitas mirar ningún terminal.
+			</p>
+		</section>
+
+		<section>
+			<h2>1 · Permiso de micrófono (solo para la prueba)</h2>
+			<p class="hint">
+				Esto vale para la prueba de abajo. En la pestaña donde inyectes el script,
+				Chrome pide el micrófono para ese sitio al pulsar el icono.
+			</p>
+			<button id="permiso">Conceder micrófono</button>
+			<div id="estado">Sin verificar.</div>
+		</section>
+
+		<section>
+			<h2>2 · Conexión con el backend</h2>
+			<label>
+				Token
+				<input id="token" type="text" placeholder="pégalo desde ~/.config/dictado/config.json" />
+			</label>
+			<label>
+				Puerto
+				<input id="port" type="number" value="8777" />
+			</label>
+			<label>
+				Idioma
+				<select id="lang">
+					<option value="es-PE">Español (Perú)</option>
+					<option value="es-ES">Español (España)</option>
+					<option value="es-MX">Español (México)</option>
+					<option value="es-AR">Español (Argentina)</option>
+					<option value="en-US">Inglés (EE. UU.)</option>
+				</select>
+			</label>
+			<button id="guardar">Guardar</button>
+		</section>
+
+		<section>
+			<h2>3 · Prueba de transcripción</h2>
+			<p class="hint">
+				Prueba la calidad aquí antes de montar el resto. Esto no pasa por el backend.
+			</p>
+			<button id="prueba">Empezar a hablar</button>
+			<div id="prueba-salida"></div>
+		</section>
+
+		<script src="options.js"></script>
+	</body>
+</html>

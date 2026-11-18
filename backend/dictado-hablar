@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+/**
+ * Hook "Stop" de Claude Code: al terminar cada respuesta, se la manda al
+ * backend de dictado para que Chrome la lea en voz alta.
+ *
+ * El backend decide si se lee: solo si estás dictando y la respuesta viene de
+ * la misma terminal donde ejecutaste dictado-ctl (por eso va KITTY_PID y
+ * KITTY_WINDOW_ID, que el hook hereda de la sesión de Claude).
+ *
+ * Nunca falla ni bloquea a Claude: cualquier problema termina en silencio con 0.
+ */
+
+import { readFileSync } from 'node:fs';
+
+import { debeLeerseLaParada } from './voz.js';
+
+const PUERTO = process.env.DICTADO_PORT ?? '8777';
+const TIMEOUT_MS = 1500;
+
+function leerEntrada() {
+	try {
+		return JSON.parse(readFileSync(0, 'utf8'));
+	} catch {
+		return {};
+	}
+}
+
+/** Texto de un mensaje: string, o la suma de sus bloques de tipo "text". */
+function textoDe(contenido) {
+	if (typeof contenido === 'string') return contenido;
+	if (!Array.isArray(contenido)) return '';
+	return contenido
+		.filter((bloque) => bloque?.type === 'text')
+		.map((bloque) => bloque.text)
+		.join('\n');
+}
+
+/**
+ * La respuesta del último turno: el texto de los mensajes del asistente desde
+ * el último mensaje tuyo. Los resultados de herramientas también llegan como
+ * mensajes "user", pero no cortan el turno.
+ */
+function ultimaRespuesta(rutaTranscripcion) {
+	let lineas;
+	try {
+		lineas = readFileSync(rutaTranscripcion, 'utf8').split('\n');
+	} catch {
+		return '';
+	}
+	let partes = [];
+	for (const linea of lineas) {
+		if (!linea.trim()) continue;
+		let entrada;
+		try {
+			entrada = JSON.parse(linea);
+		} catch {
+			continue;
+		}
+		const contenido = entrada.message?.content;
+		if (entrada.type === 'user') {
+			const esResultado = Array.isArray(contenido) && contenido.some((b) => b?.type === 'tool_result');
+			if (!esResultado) partes = [];
+		}
+		if (entrada.type === 'assistant') {
+			const texto = textoDe(contenido).trim();
+			if (texto) partes.push(texto);
+		}
+	}
+	return partes.join('\n\n');
+}
+
+async function main() {
+	const entrada = leerEntrada();
+	if (!debeLeerseLaParada(entrada)) return;
+	// Algunas versiones de Claude Code ya traen el último mensaje en la entrada.
+	const texto =
+		typeof entrada.last_assistant_message === 'string' && entrada.last_assistant_message.trim()
+			? entrada.last_assistant_message
+			: ultimaRespuesta(entrada.transcript_path);
+	if (!texto.trim()) return;
+
+	await fetch(`http://127.0.0.1:${PUERTO}/hablar`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			texto,
+			kittyPid: process.env.KITTY_PID ?? '',
+			kittyWindowId: process.env.KITTY_WINDOW_ID ?? '',
+		}),
+		signal: AbortSignal.timeout(TIMEOUT_MS),
+	});
+}
+
+main()
+	.catch(() => {}) // backend apagado, timeout…: Claude no debe enterarse
+	.finally(() => process.exit(0));

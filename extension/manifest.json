@@ -1,0 +1,24 @@
+{
+	"manifest_version": 3,
+	"name": "Dictado",
+	"version": "2.0.0",
+	"description": "Dictado por voz hacia el terminal. Pulsa el icono en una pestaña para inyectar el reconocedor ahí.",
+	"minimum_chrome_version": "116",
+	"permissions": [
+		"storage",
+		"alarms",
+		"scripting",
+		"activeTab"
+	],
+	"host_permissions": [
+		"ws://127.0.0.1/*",
+		"http://127.0.0.1/*"
+	],
+	"background": {
+		"service_worker": "service-worker.js"
+	},
+	"options_page": "options.html",
+	"action": {
+		"default_title": "Dictado — inyectar en esta pestaña (otro clic lo retira)"
+	}
+}

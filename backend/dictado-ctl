@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Cliente de control del dictado. Lo invoca el keybind de Hyprland.
+#
+# Uso: dictado-ctl [toggle|start|stop|callar|status]
+
+set -euo pipefail
+
+PUERTO="${DICTADO_PORT:-8777}"
+COMANDO="${1:-toggle}"
+
+case "$COMANDO" in
+	status)
+		curl -fsS "http://127.0.0.1:${PUERTO}/status" \
+			|| { echo "el backend de dictado no está corriendo" >&2; exit 1; }
+		;;
+	callar)
+		# Corta la lectura en voz alta de la respuesta de Claude.
+		curl -fsS -X POST "http://127.0.0.1:${PUERTO}/callar" \
+			|| { echo "el backend de dictado no está corriendo" >&2; exit 1; }
+		;;
+	toggle | start | stop)
+		# Dentro de kitty estas variables dicen en qué ventana estás: el dictado
+		# irá a esta misma terminal. Desde un atajo de Hyprland van vacías y el
+		# backend usa el kitty enfocado.
+		ORIGEN="{\"kittyPid\":\"${KITTY_PID:-}\",\"kittyWindowId\":\"${KITTY_WINDOW_ID:-}\"}"
+		curl -fsS -X POST -H 'Content-Type: application/json' -d "$ORIGEN" \
+			"http://127.0.0.1:${PUERTO}/${COMANDO}" \
+			|| { echo "el backend de dictado no está corriendo" >&2; exit 1; }
+		;;
+	*)
+		echo "comando inválido: $COMANDO (usa: toggle, start, stop, callar, status)" >&2
+		exit 2
+		;;
+esac
+echo

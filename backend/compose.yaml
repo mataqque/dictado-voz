@@ -1,0 +1,36 @@
+# docker compose up -d --build     arrancar
+# docker compose logs -f           ver logs en vivo
+services:
+  dictado:
+    build: .
+    container_name: dictado
+    restart: unless-stopped
+    # Red del host: el backend sigue escuchando solo en 127.0.0.1, que es donde
+    # lo busca la extensión. Con puertos publicados quedaría expuesto en 0.0.0.0.
+    network_mode: host
+    # Ver /proc del host: ahí está la clave pública de cada kitty (ver server.js).
+    pid: host
+    tty: true # logs con colores
+    # node --watch + código montado: guardas en el host y se recarga (sigue los
+    # imports, así que comandos.js también cuenta).
+    command: ['node', '--watch', 'server.js']
+    environment:
+      DICTADO_CONFIG: /config/config.json
+      TZ: America/Lima
+      XDG_RUNTIME_DIR: /run/user/1000
+      WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-wayland-1}
+    volumes:
+      # La carpeta, no archivos sueltos: un editor que guarda por renombrado
+      # dejaría al contenedor viendo la versión vieja de un archivo montado solo.
+      - .:/app:ro
+      # node_modules es el de la imagen, no el del host.
+      - /app/node_modules
+      - /etc/localtime:/etc/localtime:ro
+      - ${HOME}/.config/dictado:/config
+      # kitty crea /tmp/kitty-dictado-<pid>: no hay forma de montar solo esos.
+      - /tmp:/tmp:ro
+      - /usr/bin/kitten:/usr/local/bin/kitten:ro
+      # /run/user y no los sockets de Wayland y Hyprland: al encender no existen hasta
+      # que inicias sesión, y montarlos sueltos impedía arrancar al contenedor.
+      # rslave: así ve /run/user/1000 cuando aparece, y sobrevive a reiniciar Hyprland.
+      - /run/user:/run/user:ro,rslave

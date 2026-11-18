@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+/**
+ * Hook "UserPromptSubmit" de Claude Code: antes de cada prompt pregunta al
+ * backend si estás dictando a esta terminal. Si es así, le añade a Claude el
+ * aviso de modo voz para que cierre la respuesta con un resumen hablado
+ * («🔊 …»), que es lo único que dictado-hablar hará leer.
+ *
+ * Nunca falla ni bloquea: backend apagado, timeout o lo que sea → sin aviso.
+ */
+
+const PUERTO = process.env.DICTADO_PORT ?? '8777';
+const TIMEOUT_MS = 800;
+
+const AVISO = [
+	'MODO VOZ ACTIVO: el usuario te está dictando y oirá tu respuesta en voz alta, quizá sin mirar la pantalla.',
+	'Aplica la skill `modo-voz`. Lo mínimo: termina la respuesta con un único párrafo que empiece por «🔊 »,',
+	'de dos a cuatro frases (unas 60 palabras), en español hablado, con la conclusión primero, sin rutas,',
+	'código, tablas ni nombres de funciones, y si necesitas algo del usuario, acaba con una pregunta concreta.',
+	'Solo ese párrafo se lee en voz alta; el resto se queda en la terminal.',
+].join(' ');
+
+async function main() {
+	const respuesta = await fetch(`http://127.0.0.1:${PUERTO}/modo`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			kittyPid: process.env.KITTY_PID ?? '',
+			kittyWindowId: process.env.KITTY_WINDOW_ID ?? '',
+		}),
+		signal: AbortSignal.timeout(TIMEOUT_MS),
+	});
+	const { voz } = await respuesta.json();
+	if (voz !== true) return;
+	process.stdout.write(
+		JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: AVISO } }),
+	);
+}
+
+main()
+	.catch(() => {})
+	.finally(() => process.exit(0));
